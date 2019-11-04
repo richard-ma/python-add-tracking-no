@@ -3,6 +3,7 @@
 
 import os
 import csv
+import glob
 
 from openpyxl import load_workbook
 from shutil import copy
@@ -79,16 +80,40 @@ class RecordDataFile(DataFile):
 if __name__ == "__main__":
 
     # 获取文件名
+    # 自动获取文件名
     # ship_filename
-    ship_filename = os.path.basename(input("*_ship.csv filename?")) # *_ship.csv
-    if ship_filename[-2:] == ('\' '):
-        ship_filename = ship_filename[:-2]
+    ship_filename = list()
+    for i in glob.glob("*_ship.csv"):
+        ship_filename.append(i)
+
+    if len(ship_filename) == 1:
+        ship_filename = ship_filename[0]
+    else:
+        raise Exception("*_ship.csv NOT FOUND!")
     #print(ship_filename)
 
     # express_filename
-    express_filename = os.path.basename(input("*_express.xlsx filename?")) # *_express.xlsx
-    if express_filename[-2:] == ('\' '):
-        express_filename = express_filename[:-2]
+    express_filename = list()
+    for i in glob.glob("*_express.xlsx"):
+        express_filename.append(i)
+
+    if len(express_filename) == 1:
+        express_filename = express_filename[0]
+    else:
+        raise Exception("*_ship.csv NOT FOUND!")
+    #print(express_filename)
+
+    # 手动填写文件名
+    # ship_filename
+    #ship_filename = os.path.basename(input("*_ship.csv filename?")) # *_ship.csv
+    #if ship_filename[-2:] == ('\' '):
+        #ship_filename = ship_filename[:-2]
+    #print(ship_filename)
+
+    # express_filename
+    #express_filename = os.path.basename(input("*_express.xlsx filename?")) # *_express.xlsx
+    #if express_filename[-2:] == ('\' '):
+        #express_filename = express_filename[:-2]
     #print(express_filename)
 
     backup_express_filename = "copy_" + express_filename # copy_ + express_filename
