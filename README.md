@@ -13,5 +13,4 @@
 	copy_*_express.xlsx为原*_express.xlsx的备份文件
 	only_in_*_express.txt为只出现在*_express.xlsx中没有找到Tracking NO的订单号
 	only_in_*_ship.txt为只出现在*_ship.csv中没有用到的订单号
-	*提示：这四个文件运行完毕后要移出目录才能进行下一次运行，否则数据会混乱*
-	
+6. **提示：这四个文件运行完毕后要移出目录才能进行下一次运行，否则数据会混乱**
