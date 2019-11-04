@@ -5,9 +5,8 @@
 
 # 使用方法
 1. 将_ship.csv和_express.xlsx结尾的两个数据文件复制到本目录
+1. **提示：必须保证\*_ship.csv和\*_express.xlsx的\*部分是相同的**
 1. 双击exe程序运行
-1. 看到*_ship.csv filename?提示后，输入_ship.csv文件的文件名，输入完毕回车
-1. 看到*_express.xlsx filename?提示后，输入_express.xlsx文件的文件名，输入完毕回车
 1. 程序运行完毕出现如下几个文件
 	*_express.xlsx为填好Tracking NO的文件
 	copy_*_express.xlsx为原*_express.xlsx的备份文件
