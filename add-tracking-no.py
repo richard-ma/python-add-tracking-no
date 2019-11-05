@@ -18,7 +18,7 @@ class DataFile(object):
         self.prefix, self.filetype = self._getFileType()
 
     def _getFileType(self):
-        prefix, suffix = self.filename.split(self.delimiter)
+        prefix, suffix = self.filename.rsplit(self.delimiter, maxsplit=1)
 
         # check filename
         if suffix in self.t_list:
