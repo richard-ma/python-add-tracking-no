@@ -107,11 +107,16 @@ class RecordDataFile():
                 f.write(line + '\r\n')
 
 if __name__ == "__main__":
-    
     record_filename = 'record.txt'
     
     ship_filename = input("请将订单和快递单对应信息文件拖动到这个窗口（然后按回车键）")
     express_filename = input("请将订单导出文件拖动到这个窗口（然后按回车键）")
+    
+    if len(ship_filename) == 0:
+        ship_filename = "test/20210808-订单导出.xlsx"
+    
+    if len(express_filename) == 0:
+        express_filename = "test/0808(1020016-804)_8535.xlsx"
     
     sdf = ShipDataFile(ship_filename, ['.xlsx']).read()
     ship_data = sdf.get_data()
