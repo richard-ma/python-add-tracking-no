@@ -7,165 +7,125 @@ import glob
 
 from openpyxl import load_workbook
 from shutil import copy
+from pprint import pprint
 
 class DataFile(object):
 
-    def __init__(self, filename):
-        self.delimiter = '_'
-        self.t_list = ["express.xlsx", "ship.csv"]
-
+    def __init__(self, filename, ext_filter=None):
         self.filename = filename
-        self.prefix, self.filetype = self._getFileType()
+        self.ext_filter = ext_filter
+        self.filetype = self._getFileType()
 
     def _getFileType(self):
-        prefix, suffix = self.filename.rsplit(self.delimiter, maxsplit=1)
+        ext = os.path.splitext(self.filename)[-1]
 
         # check filename
-        if suffix in self.t_list:
-            return (prefix, suffix.split('.')[1])
-        else:
-            raise Exception("Filename format ERROR!")
+        if self.ext_filter is not None and ext not in self.ext_filter:
+            raise Exception("本程序不支持扩展名为%s的文件%s" % (ext, self.filename))
+        
+        return ext
+    
+    def read(self):
+        self.workbook = load_workbook(filename = self.filename)
+        return self
 
-    def _checkFileExists(self):
-        if not os.path.exists(self.filename):
-            raise Exception("File not found!")
+    def write(self):    
+        self.workbook.save(self.filename)
+        return self
+
 
 class ShipDataFile(DataFile):
-
-    #[订单标识，商品交易号]
-    def read(self):
-        if self.filetype != "csv":
-            raise Exception("DataFile type must be 'ship'!")
-
-        self._checkFileExists()
-
-        data = list()
-        with open(self.filename, 'r+', newline='', encoding='GBK') as f:
-            source = csv.reader(f)
-            for r in source:
-                data.append(r[:2])
-        return dict(data[1:])
-
-    def write(self, data):
-        with open(self.filename, 'w+', encoding='GBK') as f:
-            w = csv.writer(f)
-            w.writerows(data)
+    def get_data(self):
+        ws = self.workbook.active
+        d = dict()
+        for row in ws.iter_rows(min_row=2): # remove title line
+            order_id, tracking_no = str(row[0].value), row[1].value
+            if '-' in order_id:
+                order_id = order_id.split('-')[-1]
+            d[order_id] = tracking_no
+            
+            print("Loading Relationship: %s -> %s" % (order_id, tracking_no))
+        return d
+        
 
 class ExpressDataFile(DataFile):
+    def add_tracking_no(self, tracking_no_data):
+        notfound = list()
+        used = set()
+        processing_count, used_count, notfound_count = 0, 0, 0
+        line_no = 1
+        for row in self.workbook.active.iter_rows(min_row=2):
+            line_no += 1
+            
+            order_id_value = row[0].value
+            order_id = str(order_id_value)
+            
+            if order_id_value is None:
+                continue
+            
+            
+            # unmerge cell
+            self.workbook.active.unmerge_cells('M%d:M%d' % (line_no, line_no+12))
+            
+            if order_id in tracking_no_data.keys():
+                self.workbook.active['M%d' % (line_no)] = tracking_no_data[order_id]
+                
+                used.add(order_id)
+                used_count += 1
+            else:
+                notfound.append(order_id)
+                notfound_count += 1
+            
+            #merge cells
+            self.workbook.active.merge_cells('M%d:M%d' % (line_no, line_no+12))
+                        
+            processing_count += 1
+        
+            print("[%dp/%du/%dn] order_id: %s, tracking_no: %s" %(
+                processing_count,
+                used_count,
+                notfound_count,
+                order_id,
+                self.workbook.active['M%d' % (line_no)]
+            ))
+                
+        unused = list()
+        if len(used) < len(tracking_no_data):
+            unused = set(tracking_no_data.keys()) - used
+            unused = list(unused)
+        
+        return notfound, unused
+                    
 
-    def read(self):
-        if self.filetype != "xlsx":
-            raise Exception("DataFile type must be 'express'!")
-
-        self._checkFileExists()
-
-        self.workbook = load_workbook(filename = self.filename)
-
-        return self.workbook
-
-    def write(self):
-        self.workbook.save(self.filename)
-
-class RecordDataFile(DataFile):
-
+class RecordDataFile():
     def __init__(self, filename):
         self.filename = filename
 
     def write(self, data):
-        #print(data)
         with open(self.filename, 'w+', encoding='GBK') as f:
-            w = csv.writer(f)
-            w.writerows(data)
+            for line in data:
+                f.write(line + '\r\n')
 
 if __name__ == "__main__":
-
-    # 获取文件名
-    # 自动获取文件名
-    # ship_filename
-    ship_filename = list()
-    for i in glob.glob("*_ship.csv"):
-        ship_filename.append(i)
-
-    if len(ship_filename) == 1:
-        ship_filename = ship_filename[0]
-    else:
-        raise Exception("*_ship.csv NOT FOUND!")
-    #print(ship_filename)
-
-    # express_filename
-    express_filename = list()
-    for i in glob.glob("*_express.xlsx"):
-        express_filename.append(i)
-
-    if len(express_filename) == 1:
-        express_filename = express_filename[0]
-    else:
-        raise Exception("*_ship.csv NOT FOUND!")
-    #print(express_filename)
-
-    # 手动填写文件名
-    # ship_filename
-    #ship_filename = os.path.basename(input("*_ship.csv filename?")) # *_ship.csv
-    #if ship_filename[-2:] == ('\' '):
-        #ship_filename = ship_filename[:-2]
-    #print(ship_filename)
-
-    # express_filename
-    #express_filename = os.path.basename(input("*_express.xlsx filename?")) # *_express.xlsx
-    #if express_filename[-2:] == ('\' '):
-        #express_filename = express_filename[:-2]
-    #print(express_filename)
-
-    backup_express_filename = "copy_" + express_filename # copy_ + express_filename
-    only_in_ship_filename = "only_in_" # only_in_*_ship.txt
-    only_in_express_filename = "only_in_" # only_in_*_express.txt
-
-    # 读取文件
-    # ship file
-    ship_file = ShipDataFile(ship_filename)
-    ship_file_data = ship_file.read() # {"订单标识":"商品交易号"}
-    #print(ship_file_data)
-    #express file
-    express_file = ExpressDataFile(express_filename)
-    ws = express_file.read().active # get active worksheet
-    #print(ws["A1"].value)
-
-    # 备份原文件
-    copy(express_filename, backup_express_filename)
-
-    # 查找修改数据
-    interval = 13
-    i = 2
-    used_ship_data = set()
-    unfound_express_data = list()
-    while ws["A%d" % (i)].value != None:
-        k = str(ws["A%d" % (i)].value)
-        if k in ship_file_data.keys():
-            used_ship_data.add(k)
-            ws["J%d" % (i)] = ship_file_data[k] # add tracking no
-        else:
-            unfound_express_data.append(k)
-        i += interval
-
-    # 保存文件
-    express_file.write()
-
-    # 写入记录
-    #print(used_ship_data)
-    #print(ship_file_data.keys())
-    #print(unfound_express_data)
-
-    only_in_ship_filename += ship_file.prefix + "_ship.txt"
-    #print(only_in_ship_filename)
-    only_in_ship_file = RecordDataFile(only_in_ship_filename)
-    #print(set(ship_file_data.keys()).difference(used_ship_data))
-    data = [[x] for x in list(set(ship_file_data.keys()).difference(used_ship_data))]
-    #print(data)
-    only_in_ship_file.write(data)
-
-    only_in_express_filename += express_file.prefix + "_express.txt"
-    #print(only_in_express_filename)
-    only_in_express_file = RecordDataFile(only_in_express_filename)
-    data = [[x] for x in unfound_express_data]
-    #print(data)
-    only_in_express_file.write(data)
+    
+    record_filename = 'record.txt'
+    
+    ship_filename = 'test/20210808-订单导出.xlsx'
+    express_filename = 'test/0808(1020016-804)_8535.xlsx'
+    
+    sdf = ShipDataFile(ship_filename, ['.xlsx']).read()
+    ship_data = sdf.get_data()
+    
+    ef = ExpressDataFile(express_filename, ['.xlsx']).read()
+    notfound, unused = ef.add_tracking_no(ship_data)
+    ef.write()
+    
+    if len(notfound) > 0 or len(unused) > 0:
+        data = [
+            '没有快递单号的订单ID',
+            *notfound,
+            '快递单列表中没有使用的订单ID',
+            *unused
+        ]
+        rf = RecordDataFile(record_filename)
+        rf.write(data)
